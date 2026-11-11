@@ -182,13 +182,13 @@ const SEED = {
   project: "Grant MMA – Tue Nov 11",
   speakers: [
     {name: "Ryan", items: [
-      {id:"B02", type:"body", title:"The Black Friday deal", takes:3, mode:"line", prompts:[], lines:[
+      {id:"B02", type:"body", title:"The Black Friday deal", takes:3, prompts:[], lines:[
         "Twelve months of unlimited training for $1,105 plus tax. That's half off our regular price.",
         "One membership covers it all: boxing, Muay Thai, strength and conditioning, and women's boxing.",
         "Never trained here? Take a free class first. If you join after, the price waits for you.",
         "Pay it once, or put half down now and the rest by the end of the month.",
         "No contract, and nothing renews when the year is up."]},
-      {id:"B01", type:"body", title:"Your first class", takes:2, mode:"line",
+      {id:"B01", type:"body", title:"Your first class", takes:2,
         prompts:["Someone's never boxed. They walk into Level 1. What happens first?","Who teaches the beginners?","What do you teach in the first hour?","How do they feel at the end?"],
         lines:[
         "You start in a Level 1 class, where a coach takes you aside to teach you the basics.",
@@ -205,7 +205,7 @@ const SEED = {
       {id:"C2", type:"cta", takes:2, text:"Claim your Black Friday year at grantmma.ca. Limited spots at this price."}
     ]},
     {name: "Nicole", items: [
-      {id:"B05", type:"body", title:"Kids Striking", takes:2, mode:"line", prompts:[], lines:[
+      {id:"B05", type:"body", title:"Kids Striking", takes:2, prompts:[], lines:[
         "Kids Striking is for ages five to eleven.",
         "It's boxing and Muay Thai basics, coached for kids: coordination, focus, and how to train safely with a partner.",
         "Classes run Tuesday and Thursday at 4:30, and Saturday and Sunday at 11:30. Forty-five minutes each.",
@@ -214,7 +214,7 @@ const SEED = {
       {id:"H16", type:"hook", pairsWith:"B05", takes:2, text:"What if after school meant boxing instead of screens?"},
       {id:"H17", type:"hook", pairsWith:"B05", takes:2, text:"North York parents, here's what a kids' boxing class looks like."},
       {id:"C3", type:"cta", takes:2, text:"Book your child's free trial class. Tap below."},
-      {id:"B04", type:"body", title:"Women's Boxing", takes:2, mode:"line", prompts:[], lines:[
+      {id:"B04", type:"body", title:"Women's Boxing", takes:2, prompts:[], lines:[
         "Women's Boxing is a one-hour class just for women, no matter if you're a complete beginner or you have some experience.",
         "We start with real fundamentals: stance, footwork, and how to throw a proper punch.",
         "Then we build strength and conditioning, so you leave sharper and stronger every week.",
@@ -255,6 +255,8 @@ function load() {
   S.projects = Array.isArray(S.projects) ? S.projects : [];
   S.log = Array.isArray(S.log) ? S.log : [];
   S.settings = Object.assign({}, DEFAULTS, S.settings || {});
+  // v2: smooth scroll is the default for every script; Line is opt-in per script with the top-right button
+  if ((S.v || 1) < 2) { S.projects.forEach(p => (p.speakers || []).forEach(sp => (sp.items || []).forEach(i => { i.mode = ''; }))); S.v = 2; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   if (!S.seeded) { S.projects.push(normProject(SEED)); S.seeded = true; save(); }
 }
 function normItem(it) {
@@ -597,7 +599,7 @@ function parseBrief(md, name) {
       const allQ = b.lines.every(x => /\?$/.test(x));
       if (b.parked && !allQ) return;
       if (allQ) items.push({id: b.id, type: 'interview', title: b.title, takes: 1, prompts: b.lines});
-      else items.push({id: b.id, type: 'body', title: b.title, takes: 2, mode: 'line', lines: b.lines, prompts: b.prompts});
+      else items.push({id: b.id, type: 'body', title: b.title, takes: 2, lines: b.lines, prompts: b.prompts});
     });
     mine.forEach(b => myHooks.filter(h => h.pairs === b.id).forEach(h => { used.add(h); items.push({id: h.id, type: 'hook', pairsWith: h.pairs, onScreen: h.onScreen, takes: 2, text: h.say}); }));
     myHooks.filter(h => !used.has(h)).forEach(h => items.push({id: h.id, type: 'hook', pairsWith: /^B\d/.test(h.pairs) ? h.pairs : '', onScreen: h.onScreen, takes: 2, text: h.say}));
@@ -679,7 +681,7 @@ function closePrompter() {
 function stopAll() { P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); clearTimeout(P.hideT); clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
 function loadScript() {
   stopAll(); const {it} = pctx();
-  P.mode = it.mode || (it.type === 'body' ? 'line' : 'scroll'); P.line = 0; P.t = 0; P.phase = 'idle';
+  P.mode = it.mode || 'scroll'; P.line = 0; P.t = 0; P.phase = 'idle';
   $('#strip').hidden = true; $('#prompter').classList.remove('nobar'); updPlay(); layout();
 }
 function syncBar() { const s = S.settings; $('#wpm').value = s.wpm; $('#wv').textContent = s.wpm + ' WPM'; $('#fsz').value = s.font; $('#wv2').textContent = s.font + ' px'; }
@@ -739,12 +741,16 @@ function play(auto) {
   if (fresh && S.settings.countdown) countdown(S.settings.countdown, 'count', '', go); else go();
 }
 function pause() { P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); if (P.phase === 'play') P.phase = 'idle'; updPlay(); showBar(); }
-function tick(now) {
-  if (!P.playing) return;
+function step() {
+  if (!P.playing) return false;
+  const now = performance.now();
   P.t += Math.min(0.5, (now - P.last) / 1000); P.last = now; applyScroll();
-  if (P.t >= P.dur) { P.playing = false; finishRead(); return; }
-  P.raf = requestAnimationFrame(tick);
+  if (P.t >= P.dur) { P.playing = false; finishRead(); return false; }
+  return true;
 }
+function tick() { if (step()) P.raf = requestAnimationFrame(tick); }
+// Safety net: keep the roll moving if the browser holds back animation frames (e.g. Low Power Mode)
+setInterval(() => { if (P.on && P.playing && performance.now() - P.last > 120) step(); }, 60);
 function finishRead() {
   P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); clearTimeout(P.hideT); setProg(1);
   const {it} = pctx();

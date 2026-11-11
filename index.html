@@ -93,6 +93,8 @@ h3.sec{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--d
 #prompter.mirror #stage{transform:scaleX(-1)}
 #ptext{position:absolute;top:0;font-weight:800;color:#fff;letter-spacing:-.01em;overflow-wrap:break-word;will-change:transform;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
 #ptext p{margin:0 0 .55em}
+#ptext p:last-child{margin-bottom:0}
+#cue{position:absolute;width:0;height:0;border-left:12px solid var(--accent);border-top:8px solid transparent;border-bottom:8px solid transparent;opacity:.85;pointer-events:none}
 #ptext.dim{opacity:.22}
 #count{position:absolute;inset:0;display:grid;place-items:center;font-size:min(46vh,30vw);font-weight:850;color:var(--accent);pointer-events:none;text-align:center;line-height:1}
 #count small{display:block;font-size:.2em;letter-spacing:.2em;color:#fff}
@@ -144,7 +146,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
     <div id="slate"></div>
     <button id="pmode" aria-label="Switch mode">Line</button>
   </div>
-  <div id="stage"><div id="ptext"></div><div id="count" hidden></div></div>
+  <div id="stage"><div id="ptext"></div><div id="cue" hidden></div><div id="count" hidden></div></div>
   <div id="strip" hidden>
     <button class="btn good" data-take="good">✓ Good</button>
     <button class="btn bad" data-take="redo">✗ Redo</button>
@@ -674,14 +676,14 @@ function closePrompter() {
   stopAll(); P.on = false; $('#prompter').hidden = true; $('#app').hidden = false;
   view = {name: 'folder', pid: P.pid, sid: P.sid}; render();
 }
-function stopAll() { P.playing = false; cancelAnimationFrame(P.raf); clearTimeout(P.hideT); clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
+function stopAll() { P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); clearTimeout(P.hideT); clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
 function loadScript() {
   stopAll(); const {it} = pctx();
   P.mode = it.mode || (it.type === 'body' ? 'line' : 'scroll'); P.line = 0; P.t = 0; P.phase = 'idle';
   $('#strip').hidden = true; $('#prompter').classList.remove('nobar'); updPlay(); layout();
 }
 function syncBar() { const s = S.settings; $('#wpm').value = s.wpm; $('#wv').textContent = s.wpm + ' WPM'; $('#fsz').value = s.font; $('#wv2').textContent = s.font + ' px'; }
-function updPlay() { $('#bplay').innerHTML = P.playing || (P.mode === 'line' && P.phase === 'play') ? SVG_PAUSE : SVG_PLAY; }
+function updPlay() { $('#bplay').innerHTML = P.playing || P.auto ? SVG_PAUSE : SVG_PLAY; }
 function setProg(f) { $('#prog i').style.width = (clamp(f, 0, 1) * 100).toFixed(2) + '%'; }
 function slate() {
   const {p, s, it} = pctx(), c = counts(p.pid, s, it);
@@ -696,16 +698,18 @@ function layout() {
   const lines = it.lines.length ? it.lines : ['(No words yet. Tap the pencil to add them.)'];
   if (P.mode === 'line') {
     P.line = clamp(P.line, 0, lines.length - 1);
-    tx.textContent = lines[P.line]; tx.style.transform = '';
-    let f = Math.round(s.font * 1.5); tx.style.fontSize = f + 'px';
+    tx.textContent = lines[P.line]; tx.style.transform = ''; tx.style.paddingTop = '0'; $('#cue').hidden = true;
+    let f = s.font; tx.style.fontSize = f + 'px';
     const h = st.clientHeight;
     while (f > 18 && tx.offsetHeight > h) { f -= 2; tx.style.fontSize = f + 'px'; }
     setProg(P.phase === 'strip' ? 1 : P.line / lines.length);
   } else {
-    tx.style.fontSize = s.font + 'px';
+    const lh = s.font * s.spacing, cue = $('#cue');
+    tx.style.fontSize = s.font + 'px'; tx.style.paddingTop = lh + 'px';
     tx.innerHTML = lines.map(l => '<p>' + esc(l) + '</p>').join('');
-    const th = tx.offsetHeight, sh = st.clientHeight;
-    P.max = th <= sh ? 0 : th - sh * 0.5;
+    P.max = Math.max(lh, tx.offsetHeight - lh);
+    const mpx = st.clientWidth * s.margin / 100;
+    cue.hidden = mpx < 18; cue.style.top = (lh * 1.5 - 8) + 'px'; cue.style.left = Math.max(2, mpx - 17) + 'px';
     const words = lines.join(' ').split(/\s+/).filter(Boolean).length, f = P.dur ? P.t / P.dur : 0;
     const nd = Math.max(1.5, words / s.wpm * 60);
     if (P.t > 0 && nd !== P.dur) P.t = f * nd;
@@ -723,21 +727,26 @@ function countdown(n, phase, label, done) {
   P.cdT = setInterval(() => { n--; if (n <= 0) { endCountdown(); done(); } else show(); }, 1000);
 }
 function endCountdown() { clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
-function play() {
+function armLine() {
+  clearTimeout(P.lineT); if (!P.auto) return;
+  const w = (pctx().it.lines[P.line] || '').split(/\s+/).filter(Boolean).length;
+  P.lineT = setTimeout(() => { if (P.on && P.auto && P.phase === 'play') nextLine(); }, Math.max(1200, w / S.settings.wpm * 60000));
+}
+function play(auto) {
   if (P.phase !== 'idle') return;
-  const go = () => { P.phase = 'play'; if (P.mode === 'scroll') { P.playing = true; P.last = performance.now(); P.raf = requestAnimationFrame(tick); } updPlay(); hideBarSoon(); };
+  const go = () => { P.phase = 'play'; if (P.mode === 'scroll') { P.playing = true; P.last = performance.now(); P.raf = requestAnimationFrame(tick); } else { P.auto = !!auto; armLine(); } updPlay(); hideBarSoon(); };
   const fresh = P.mode === 'scroll' ? P.t === 0 : P.line === 0;
   if (fresh && S.settings.countdown) countdown(S.settings.countdown, 'count', '', go); else go();
 }
-function pause() { P.playing = false; cancelAnimationFrame(P.raf); if (P.phase === 'play') P.phase = 'idle'; updPlay(); showBar(); }
+function pause() { P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); if (P.phase === 'play') P.phase = 'idle'; updPlay(); showBar(); }
 function tick(now) {
   if (!P.playing) return;
-  P.t += Math.min(0.1, (now - P.last) / 1000); P.last = now; applyScroll();
+  P.t += Math.min(0.5, (now - P.last) / 1000); P.last = now; applyScroll();
   if (P.t >= P.dur) { P.playing = false; finishRead(); return; }
   P.raf = requestAnimationFrame(tick);
 }
 function finishRead() {
-  P.playing = false; cancelAnimationFrame(P.raf); clearTimeout(P.hideT); setProg(1);
+  P.playing = false; P.auto = false; clearTimeout(P.lineT); cancelAnimationFrame(P.raf); clearTimeout(P.hideT); setProg(1);
   const {it} = pctx();
   if (it.type === 'hook' && S.settings.hold) countdown(S.settings.hold, 'hold', 'HOLD', showStrip); else showStrip();
 }
@@ -757,7 +766,7 @@ function nextLine() {
   const {it} = pctx();
   if (P.phase === 'idle' && P.line === 0 && S.settings.countdown && !P.armed) { P.armed = true; return play(); }
   P.armed = false;
-  if (P.line < it.lines.length - 1) { P.line++; P.phase = 'play'; updPlay(); layout(); hideBarSoon(); } else finishRead();
+  if (P.line < it.lines.length - 1) { P.line++; P.phase = 'play'; updPlay(); layout(); hideBarSoon(); armLine(); } else finishRead();
 }
 function prevLine() { if (P.phase === 'strip') { $('#strip').hidden = true; P.phase = 'idle'; $('#prompter').classList.remove('nobar'); } if (P.line > 0) { P.line--; layout(); } else go(-1); }
 function primary() {
@@ -778,7 +787,7 @@ $('#pback').onclick = closePrompter;
 $('#pmode').onclick = () => setMode(P.mode === 'line' ? 'scroll' : 'line');
 $('#slate').onclick = () => { showBar(); if (P.phase === 'play') hideBarSoon(); };
 $('#edge').onclick = () => { showBar(); if (P.phase === 'play') hideBarSoon(); };
-$('#bplay').onclick = () => { if (P.mode === 'line') { if (P.phase === 'play') { P.phase = 'idle'; updPlay(); showBar(); } else play(); } else P.playing ? pause() : play(); };
+$('#bplay').onclick = () => { if (P.mode === 'line') { if (P.auto) pause(); else { if (P.phase === 'play') P.phase = 'idle'; play(true); } } else P.playing ? pause() : play(); };
 $('#bprev').onclick = () => go(-1);
 $('#bnext').onclick = () => go(1);
 $('#bedit').onclick = () => { pause(); const {p, s, it} = pctx(); editItem(p, s, it); };

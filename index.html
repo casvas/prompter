@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prompter">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>Shoot Prompter</title>
+<style>
+:root{--bg:#0b0b0c;--card:#1c1c1f;--card2:#2a2a2e;--line:#333338;--text:#f4f4f5;--dim:#8e8e93;--accent:#FF8A00;--good:#34c759;--bad:#ff453a;
+  --sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;overflow-x:hidden;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
+[hidden]{display:none!important}
+svg{width:24px;height:24px;fill:currentColor;display:block}
+
+/* ---------- library ---------- */
+#app{max-width:960px;margin:0 auto;padding:calc(var(--st) + 10px) calc(var(--sr) + 14px) calc(var(--sb) + 28px) calc(var(--sl) + 14px);min-height:100%}
+.top{display:flex;align-items:center;gap:10px;min-height:52px;margin-bottom:8px}
+.top h1{flex:1;min-width:0;font-size:24px;line-height:1.15;margin:0;font-weight:800;overflow-wrap:anywhere}
+.top h1 small{display:block;font-size:13px;font-weight:500;color:var(--dim);margin-top:2px}
+.rbtn{width:44px;height:44px;flex:none;border-radius:50%;background:var(--card2);display:grid;place-items:center}
+.btn{min-height:44px;padding:0 16px;border-radius:22px;background:var(--card2);font-weight:650;white-space:nowrap;flex:none}
+.btn.accent{background:var(--accent);color:#000}
+.btn.good{background:var(--good);color:#000}.btn.bad{background:var(--bad);color:#000}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+.search{width:100%;height:46px;border-radius:14px;border:1px solid var(--line);background:var(--card);padding:0 14px;margin-bottom:14px;outline:0;-webkit-appearance:none}
+.search:focus,.f input:focus,.f textarea:focus,.f select:focus{border-color:var(--accent)}
+.plist{display:grid;gap:10px}
+.prow{display:block;width:100%;text-align:left;background:var(--card);border-radius:18px;padding:16px 18px}
+.prow b{display:block;font-size:19px;font-weight:750;overflow-wrap:anywhere}
+.prow span{display:block;color:var(--dim);font-size:14px;margin-top:4px}
+.prow span i{font-style:normal;color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px}
+.tile{background:var(--card);border-radius:20px;padding:12px;text-align:left;display:block;width:100%}
+.minis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.mini{background:var(--card2);border-radius:10px;height:54px;padding:6px 7px;overflow:hidden;font-size:9px;line-height:1.25;color:var(--dim)}
+.mini b{display:block;font-size:12px;color:var(--text)}
+.tile .nm{font-weight:750;font-size:17px;overflow-wrap:anywhere}
+.tile .ct{color:var(--dim);font-size:13px;margin-top:2px}
+.tile .ct i{font-style:normal;color:var(--accent)}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -14px 14px;padding:0 14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{min-height:44px;padding:0 16px;border-radius:22px;background:var(--card);color:var(--dim);font-weight:600;white-space:nowrap;flex:none}
+.chip.on{background:var(--accent);color:#000}
+.card{background:var(--card);border-radius:20px;padding:12px 13px 13px;min-height:132px;text-align:left;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border:2px solid transparent;transition:transform .12s}
+.card.done{background:#17201a}
+.card.drag{border-color:var(--accent);transform:scale(1.04);background:var(--card2);z-index:2;position:relative}
+.badge{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-bottom:8px}
+.cid{font-size:30px;line-height:1;font-weight:850;letter-spacing:-.5px;white-space:nowrap}
+.ctype{font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.5px;padding:3px 7px;border-radius:7px;background:var(--card2);white-space:nowrap}
+.ctype.hook{color:#ffd08a}.ctype.body{color:#9cc9ff}.ctype.cta{color:#b7f0c2}.ctype.interview{color:#e0b3ff}
+.pair{font-size:14px;font-weight:650;color:var(--dim);white-space:nowrap}
+.tk{font-size:15px;font-weight:800;color:var(--dim);letter-spacing:1px;margin-left:auto;white-space:nowrap}
+.tk.done{color:var(--good)}
+.prev{font-size:13px;line-height:1.35;color:#c4c4c9;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.hint{color:var(--dim);font-size:13px;margin:14px 2px}
+.empty{color:var(--dim);text-align:center;padding:40px 10px}
+h3.sec{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:20px 2px 8px}
+
+/* ---------- operator ---------- */
+.opcur{background:var(--card);border-radius:20px;padding:16px}
+.opcur .cid{font-size:44px}
+.opcur .ttl{font-size:17px;font-weight:700;margin:2px 0 4px}
+.opcur .tkn{color:var(--accent);font-weight:700}
+.opcur ol{margin:6px 0 0;padding-left:26px}
+.opcur li{font-size:19px;line-height:1.35;padding:7px 0}
+.opcur ol.ask li{color:#ffd08a}
+.opcur li.said{opacity:.35;text-decoration:line-through}
+.opbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0;position:sticky;bottom:calc(var(--sb) + 8px)}
+.opbtns .btn{min-height:58px;font-size:18px;padding:0 6px;box-shadow:0 0 0 6px var(--bg)}
+.qrow{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:8px;min-height:52px}
+.qrow b{font-size:20px;font-weight:850;white-space:nowrap}
+.qrow span{color:var(--dim);font-size:13px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* ---------- prompter ---------- */
+#prompter{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;padding:var(--st) var(--sr) 0 var(--sl);z-index:10;user-select:none;-webkit-user-select:none}
+.ptop{display:flex;align-items:center;gap:10px;height:48px;flex:none;padding:0 6px}
+.ptop .rbtn{background:#1d1d20}
+#slate{flex:1;min-width:0;text-align:center;font-size:13px;font-weight:650;color:#7c7c82;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:stretch;line-height:48px}
+#slate b{color:#b9b9be;font-weight:800}
+#pmode{min-width:74px;height:40px;border-radius:20px;background:var(--accent);color:#000;font-weight:800;font-size:14px;padding:0 14px}
+#prompter.nobar .ptop .rbtn,#prompter.nobar #pmode{opacity:.28}
+#stage{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none}
+#prompter.mirror #stage{transform:scaleX(-1)}
+#ptext{position:absolute;top:0;font-weight:800;color:#fff;letter-spacing:-.01em;overflow-wrap:break-word;will-change:transform;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
+#ptext p{margin:0 0 .55em}
+#ptext.dim{opacity:.22}
+#count{position:absolute;inset:0;display:grid;place-items:center;font-size:min(46vh,30vw);font-weight:850;color:var(--accent);pointer-events:none;text-align:center;line-height:1}
+#count small{display:block;font-size:.2em;letter-spacing:.2em;color:#fff}
+#strip{flex:none;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 10px}
+#strip .btn{min-height:54px;font-size:18px;padding:0 6px}
+#pbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 14px;padding:6px 10px;background:#141416;border-radius:18px 18px 0 0}
+#prompter.nobar #pbar{display:none}
+.grp{display:flex;align-items:center;gap:6px}
+.grp.spd{flex:1 1 220px;min-width:0}
+.grp.spd .em{font-size:20px;filter:grayscale(1) brightness(1.7);width:26px;text-align:center;flex:none}
+.grp.spd .em.t{font-size:14px;font-weight:800;filter:none;color:var(--dim)}
+.grp.spd .em.t.big{font-size:22px}
+#wv{min-width:74px;text-align:right;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:60px;height:44px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:#3a3a3f}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);margin-top:-10.5px;border:0}
+input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:#3a3a3f}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accent);border:0}
+.ib{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#d6d6da;font-weight:800;font-size:17px}
+.ib.on{color:var(--accent)}
+.ib.play{background:var(--accent);color:#000;width:52px;height:52px}
+.ib.play svg{width:30px;height:30px}
+#edge{flex:none;height:max(16px,var(--sb));position:relative}
+#prog{position:absolute;left:calc(-1 * var(--sl));right:calc(-1 * var(--sr));bottom:0;height:3px;background:#1c1c1f}
+#prog i{display:block;height:100%;width:0;background:var(--accent)}
+
+/* ---------- sheets ---------- */
+#sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
+.sh{background:#17171a;width:100%;max-width:640px;max-height:100%;overflow-y:auto;border-radius:22px 22px 0 0;padding:16px calc(var(--sr) + 16px) calc(var(--sb) + 18px) calc(var(--sl) + 16px);-webkit-overflow-scrolling:touch}
+.sh h2{margin:0 0 12px;font-size:20px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.f{display:block;margin-bottom:12px}
+.f>span{display:block;font-size:13px;color:var(--dim);margin-bottom:5px}
+.f input,.f select,.f textarea{width:100%;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:10px 12px;outline:0;-webkit-appearance:none;appearance:none}
+.f textarea{min-height:120px;resize:vertical;line-height:1.4}
+.f input[type=range]{border:0;background:transparent;padding:0}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sw{display:flex;align-items:center;justify-content:space-between;min-height:46px;margin-bottom:12px}
+.sw input{width:26px;height:26px;accent-color:var(--accent)}
+.sh p.note{color:var(--dim);font-size:13px;margin:4px 0 12px}
+#toast{position:fixed;left:50%;bottom:calc(var(--sb) + 26px);transform:translateX(-50%);background:#2e2e33;color:#fff;padding:11px 18px;border-radius:22px;font-weight:600;font-size:14px;z-index:30;max-width:88vw;text-align:center;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="prompter" hidden>
+  <div class="ptop">
+    <button class="rbtn" id="pback" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+    <div id="slate"></div>
+    <button id="pmode" aria-label="Switch mode">Line</button>
+  </div>
+  <div id="stage"><div id="ptext"></div><div id="count" hidden></div></div>
+  <div id="strip" hidden>
+    <button class="btn good" data-take="good">✓ Good</button>
+    <button class="btn bad" data-take="redo">✗ Redo</button>
+    <button class="btn" data-take="next">Next →</button>
+  </div>
+  <div id="pbar">
+    <div class="grp spd" id="gspeed"><span class="em">🚶</span><input type="range" id="wpm" min="60" max="300" step="5" aria-label="Speed"><span class="em">🏃</span><span id="wv">160 WPM</span></div>
+    <div class="grp spd" id="gsize" hidden><span class="em t">A</span><input type="range" id="fsz" min="24" max="110" step="2" aria-label="Text size"><span class="em t big">A</span><span id="wv2" style="min-width:74px;text-align:right;font-weight:800;font-size:15px;color:var(--accent)">48 px</span></div>
+    <div class="grp">
+      <button class="ib" id="bprev" aria-label="Previous script"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+      <button class="ib play" id="bplay" aria-label="Play or pause"></button>
+      <button class="ib" id="bnext" aria-label="Next script"><svg viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    </div>
+    <div class="grp">
+      <button class="ib" id="bedit" aria-label="Edit script"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+      <button class="ib" id="baa" aria-label="Text size">Aa</button>
+      <button class="ib" id="bset" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg></button>
+    </div>
+  </div>
+  <div id="edge"><div id="prog"><i></i></div></div>
+</div>
+
+<div id="sheet" hidden></div>
+<div id="toast" hidden></div>
+<input type="file" id="fpick" multiple accept=".txt,.zip,.json,.md,text/plain,application/zip,application/json" hidden>
+<input type="file" id="dpick" webkitdirectory multiple hidden>
+
+<script>
+'use strict';
+/* ================= seed data ================= */
+const C1 = "Try a free class. Tap below and we'll call you to set it up.";
+const SEED = {
+  project: "Grant MMA – Tue Nov 11",
+  speakers: [
+    {name: "Ryan", items: [
+      {id:"B02", type:"body", title:"The Black Friday deal", takes:3, mode:"line", prompts:[], lines:[
+        "Twelve months of unlimited training for $1,105 plus tax. That's half off our regular price.",
+        "One membership covers it all: boxing, Muay Thai, strength and conditioning, and women's boxing.",
+        "Never trained here? Take a free class first. If you join after, the price waits for you.",
+        "Pay it once, or put half down now and the rest by the end of the month.",
+        "No contract, and nothing renews when the year is up."]},
+      {id:"B01", type:"body", title:"Your first class", takes:2, mode:"line",
+        prompts:["Someone's never boxed. They walk into Level 1. What happens first?","Who teaches the beginners?","What do you teach in the first hour?","How do they feel at the end?"],
+        lines:[
+        "You start in a Level 1 class, where a coach takes you aside to teach you the basics.",
+        "First you learn your stance, your guard, the jab, the cross, and how to move your feet.",
+        "Then, you get paired with someone who's been training a while, so you're never lost.",
+        "Your first class is free, and if you join after, the Black Friday deal is still yours: a full year of unlimited classes at half price."]},
+      {id:"H01", type:"hook", pairsWith:"B01", takes:2, text:"Never trained a day in your life? Here's how your first class works."},
+      {id:"H03", type:"hook", pairsWith:"B01", takes:2, text:"Pro fighters train here. So do people who've never thrown a punch. Here's where they start."},
+      {id:"H04", type:"hook", pairsWith:"B01", takes:2, text:"People ask if they're too old to start boxing. Our members started at every age. Here's what that first class looks like."},
+      {id:"H05", type:"hook", pairsWith:"B01", takes:2, text:"Joined a gym and stopped going? Here's what training looks like when you're actually learning something."},
+      {id:"H07", type:"hook", pairsWith:"B02", takes:2, text:"Half price on a full year of boxing and Muay Thai. And if you've never trained here, you can try it before you pay."},
+      {id:"H09", type:"hook", pairsWith:"B02", takes:2, text:"North York, here's a Black Friday deal you'll actually use every week."},
+      {id:"C1", type:"cta", takes:2, text:C1},
+      {id:"C2", type:"cta", takes:2, text:"Claim your Black Friday year at grantmma.ca. Limited spots at this price."}
+    ]},
+    {name: "Nicole", items: [
+      {id:"B05", type:"body", title:"Kids Striking", takes:2, mode:"line", prompts:[], lines:[
+        "Kids Striking is for ages five to eleven.",
+        "It's boxing and Muay Thai basics, coached for kids: coordination, focus, and how to train safely with a partner.",
+        "Classes run Tuesday and Thursday at 4:30, and Saturday and Sunday at 11:30. Forty-five minutes each.",
+        "Kids learn to listen, work hard and cheer each other on, and they leave proud of what they did.",
+        "Kids can join on the Black Friday membership too: a full year of classes at half price."]},
+      {id:"H16", type:"hook", pairsWith:"B05", takes:2, text:"What if after school meant boxing instead of screens?"},
+      {id:"H17", type:"hook", pairsWith:"B05", takes:2, text:"North York parents, here's what a kids' boxing class looks like."},
+      {id:"C3", type:"cta", takes:2, text:"Book your child's free trial class. Tap below."},
+      {id:"B04", type:"body", title:"Women's Boxing", takes:2, mode:"line", prompts:[], lines:[
+        "Women's Boxing is a one-hour class just for women, no matter if you're a complete beginner or you have some experience.",
+        "We start with real fundamentals: stance, footwork, and how to throw a proper punch.",
+        "Then we build strength and conditioning, so you leave sharper and stronger every week.",
+        "Some women here want to compete. Some just want the best hour of their week. Both belong here.",
+        "For Black Friday, it's half price: a full year of Women's Boxing, plus every other class on the schedule."]},
+      {id:"H13", type:"hook", pairsWith:"B04", takes:2, text:"Want to learn to box without being the only woman in the room?"},
+      {id:"H14", type:"hook", pairsWith:"B04", takes:2, text:"Looking for a real boxing class, not just punching to the beat of music? This is for you."},
+      {id:"H15", type:"hook", pairsWith:"B04", takes:2, text:"Here's what a women's class looks like at a real boxing gym."},
+      {id:"C1", type:"cta", takes:2, text:C1}
+    ]},
+    {name: "Member", operatorOnly: true, items: [
+      {id:"INT", type:"interview", title:"Member interview", takes:1, prompts:[
+        "How did you feel before your first class?","What actually happened in that first hour?","What made you come back?","What's changed since you started?"]}
+    ]}
+  ]
+};
+
+/* ================= helpers ================= */
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TYPES = {hook:'Hook', body:'Body', cta:'CTA', interview:'Interview'};
+const guessType = id => /^H/i.test(id) ? 'hook' : /^C/i.test(id) ? 'cta' : /^(INT|Q)/i.test(id) ? 'interview' : 'body';
+const defTarget = t => t === 'interview' ? 1 : 2;
+const splitLines = t => String(t).split(/\s+\/\s+|\n+/).map(s => s.trim()).filter(Boolean);
+let toastT;
+function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms || 2400); }
+
+/* ================= storage ================= */
+const KEY = 'shootprompter.v1';
+const DEFAULTS = {wpm:160, font:48, spacing:1.2, margin:4, mirror:false, countdown:0, hold:2, align:'left'};
+let S;
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save (storage full or blocked)'); } }
+function load() {
+  try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+  if (!S || typeof S !== 'object') S = {};
+  S.projects = Array.isArray(S.projects) ? S.projects : [];
+  S.log = Array.isArray(S.log) ? S.log : [];
+  S.settings = Object.assign({}, DEFAULTS, S.settings || {});
+  if (!S.seeded) { S.projects.push(normProject(SEED)); S.seeded = true; save(); }
+}
+function normItem(it) {
+  it = it || {};
+  const id = String(it.id || '?').trim();
+  const type = TYPES[String(it.type || '').toLowerCase()] ? String(it.type).toLowerCase() : guessType(id);
+  let lines = Array.isArray(it.lines) && it.lines.length ? it.lines.map(s => String(s).trim()).filter(Boolean)
+    : it.text ? (type === 'body' ? splitLines(it.text) : [String(it.text).trim()]) : [];
+  return {uid: uid(), id, type, title: String(it.title || ''), pairsWith: String(it.pairsWith || ''), onScreen: String(it.onScreen || ''),
+    target: Math.max(1, parseInt(it.takes, 10) || defTarget(type)), mode: it.mode === 'line' || it.mode === 'scroll' ? it.mode : '',
+    lines, prompts: Array.isArray(it.prompts) ? it.prompts.map(String).filter(Boolean) : []};
+}
+function normProject(p) {
+  p = p || {};
+  const speakers = (Array.isArray(p.speakers) ? p.speakers : []).map(s => {
+    const items = (Array.isArray(s.items) ? s.items : []).map(normItem);
+    return {sid: uid(), name: String(s.name || 'Speaker'), operatorOnly: !!s.operatorOnly || (items.length > 0 && items.every(i => i.type === 'interview')), items};
+  });
+  return {pid: uid(), name: String(p.project || p.name || 'Untitled project'), date: p.date || '', created: Date.now(), speakers, _log: Array.isArray(p.takeLog) ? p.takeLog : null};
+}
+function exportItem(it) {
+  const o = {id: it.id, type: it.type};
+  if (it.title) o.title = it.title;
+  if (it.pairsWith) o.pairsWith = it.pairsWith;
+  if (it.onScreen) o.onScreen = it.onScreen;
+  o.takes = it.target;
+  if (it.mode) o.mode = it.mode;
+  if (it.type === 'body') o.lines = it.lines; else if (it.type !== 'interview') o.text = it.lines.join(' ');
+  if (it.type === 'body' || it.type === 'interview') o.prompts = it.prompts;
+  return o;
+}
+function exportProject(p) {
+  return {project: p.name, date: p.date || undefined,
+    speakers: p.speakers.map(s => Object.assign({name: s.name}, s.operatorOnly ? {operatorOnly: true} : {}, {items: s.items.map(exportItem)})),
+    takeLog: S.log.filter(l => l.pid === p.pid).map(l => ({speaker: l.speaker, id: l.id, type: l.type, take: l.take, result: l.result, timestamp: l.ts}))};
+}
+function addProject(np) {
+  const ex = S.projects.find(p => p.name === np.name);
+  if (ex && confirm('"' + np.name + '" is already on this phone.\n\nOK = replace it (takes are kept)\nCancel = keep both')) {
+    np.pid = ex.pid; np.created = ex.created; S.projects[S.projects.indexOf(ex)] = np;
+  } else {
+    S.projects.unshift(np);
+    if (np._log) np._log.forEach(l => S.log.push({pid: np.pid, project: np.name, speaker: l.speaker, id: l.id, type: l.type || guessType(l.id), take: l.take, result: l.result, ts: l.timestamp || l.ts}));
+  }
+  delete np._log; save();
+  return np;
+}
+
+/* ================= takes ================= */
+const tkey = (pid, sp, it) => pid + '|' + sp.name + '|' + it.id;
+function counts(pid, sp, it) { let good = 0, total = 0; for (const l of S.log) if (l.pid === pid && l.speaker === sp.name && l.id === it.id) { total++; if (l.result === 'good') good++; } return {good, total}; }
+const isDone = (pid, sp, it) => counts(pid, sp, it).good >= it.target;
+function logTake(p, sp, it, result) {
+  const c = counts(p.pid, sp, it);
+  S.log.push({pid: p.pid, project: p.name, speaker: sp.name, id: it.id, type: it.type, take: c.total + 1, result, ts: new Date().toISOString()});
+  save();
+  return result === 'good' && c.good + 1 >= it.target;
+}
+function progress(p, sp) { const l = sp.items; let d = 0; l.forEach(i => { if (isDone(p.pid, sp, i)) d++; }); return {done: d, total: l.length}; }
+function tkMarks(pid, sp, it) { const c = counts(pid, sp, it); const g = Math.min(c.good, it.target); return {txt: '✓'.repeat(g) + '○'.repeat(it.target - g), done: c.good >= it.target}; }
+
+/* ================= library views ================= */
+let view = {name: 'projects'};
+let filter = 'all', query = '', suppressClick = 0;
+const proj = pid => S.projects.find(p => p.pid === pid);
+const spkOf = (p, sid) => p && p.speakers.find(s => s.sid === sid);
+function projDate(p) {
+  if (p.date) return p.date;
+  const m = p.name.split(/\s[–—-]\s/); const last = m[m.length - 1];
+  if (m.length > 1 && /\d/.test(last)) return last;
+  return new Date(p.created).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
+}
+const ICON_BACK = '<svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>';
+function badge(pid, sp, it) {
+  const m = tkMarks(pid, sp, it);
+  return '<div class="badge"><span class="cid">' + esc(it.id) + '</span><span class="ctype ' + it.type + '">' + TYPES[it.type] + '</span>' +
+    (it.pairsWith ? '<span class="pair">→ ' + esc(it.pairsWith) + '</span>' : '') +
+    '<span class="tk' + (m.done ? ' done' : '') + '">' + m.txt + '</span></div>';
+}
+const preview = it => (it.title ? it.title + ': ' : '') + (it.lines.length ? it.lines.join(' / ') : it.prompts.join(' / '));
+
+function render() {
+  const app = $('#app');
+  if (view.name === 'project' && !proj(view.pid)) view = {name: 'projects'};
+  if ((view.name === 'folder' || view.name === 'operator') && !spkOf(proj(view.pid), view.sid)) view = proj(view.pid) ? {name: 'project', pid: view.pid} : {name: 'projects'};
+  wake(view.name === 'operator' || P.on);
+  if (view.name === 'projects') {
+    app.innerHTML = '<div class="top"><h1>Projects</h1><button class="btn accent" data-act="import">＋ Import</button></div>' +
+      '<input class="search" id="q" type="search" placeholder="Search all scripts" autocomplete="off" value="' + esc(query) + '"><div id="res"></div>';
+    renderResults();
+  } else if (view.name === 'project') {
+    const p = proj(view.pid);
+    app.innerHTML = '<div class="top"><button class="rbtn" data-act="home" aria-label="Back">' + ICON_BACK + '</button><h1>' + esc(p.name) +
+      '<small>' + esc(projDate(p)) + ' · ' + p.speakers.length + ' speaker' + (p.speakers.length === 1 ? '' : 's') + '</small></h1></div>' +
+      '<div class="grid">' + p.speakers.map(s => {
+        const pr = progress(p, s);
+        const minis = s.items.slice(0, 4).map(i => '<div class="mini"><b>' + esc(i.id) + '</b>' + esc(preview(i).slice(0, 60)) + '</div>').join('') + '<div class="mini"></div>'.repeat(Math.max(0, 4 - s.items.length));
+        return '<button class="tile" data-act="folder" data-sid="' + s.sid + '"><div class="minis">' + minis + '</div><div class="nm">' + esc(s.name) + '</div><div class="ct">' +
+          s.items.length + ' script' + (s.items.length === 1 ? '' : 's') + ' · <i>' + pr.done + '/' + pr.total + ' done</i></div></button>';
+      }).join('') + '</div>' + (p.speakers.length ? '' : '<div class="empty">No speakers in this project.</div>') +
+      '<h3 class="sec">Export</h3><div class="row"><button class="btn" data-act="log-csv">Take log (CSV)</button><button class="btn" data-act="log-json">Take log (JSON)</button><button class="btn" data-act="exp">Project backup (JSON)</button></div>' +
+      '<h3 class="sec">Project</h3><div class="row"><button class="btn" data-act="rename">Rename</button><button class="btn" data-act="clearlog">Clear takes</button><button class="btn" data-act="delproj" style="color:var(--bad)">Delete</button></div>';
+  } else if (view.name === 'folder') {
+    const p = proj(view.pid), s = spkOf(p, view.sid), pr = progress(p, s);
+    const chips = [['all', 'All'], ['body', 'Bodies'], ['hook', 'Hooks'], ['cta', 'CTAs'], ['notdone', 'Not done']];
+    const items = s.items.filter(i => filter === 'all' || (filter === 'notdone' ? !isDone(p.pid, s, i) : i.type === filter));
+    app.innerHTML = '<div class="top"><button class="rbtn" data-act="proj" aria-label="Back">' + ICON_BACK + '</button><h1>' + esc(s.name) + '<small>' + pr.done + '/' + pr.total + ' done · ' + esc(p.name) + '</small></h1></div>' +
+      '<div class="row">' + (s.operatorOnly ? '' : '<button class="btn accent" data-act="start">▶ Start folder</button>') + '<button class="btn' + (s.operatorOnly ? ' accent' : '') + '" data-act="operator">Operator view</button><button class="btn" data-act="newitem">＋ Script</button></div>' +
+      '<div class="chips">' + chips.map(c => '<button class="chip' + (filter === c[0] ? ' on' : '') + '" data-act="filter" data-f="' + c[0] + '">' + c[1] + '</button>').join('') + '</div>' +
+      '<div class="grid" id="cards">' + items.map(i => '<div class="card' + (isDone(p.pid, s, i) ? ' done' : '') + '" data-act="open" data-uid="' + i.uid + '">' + badge(p.pid, s, i) + '<div class="prev">' + esc(preview(i)) + '</div></div>').join('') + '</div>' +
+      (items.length ? '<p class="hint">' + (filter === 'all' ? 'Run order. Press and hold a card, then drag to reorder.' : 'Switch to All to reorder.') + '</p>' : '<div class="empty">Nothing here.</div>');
+  } else if (view.name === 'operator') renderOperator();
+  window.scrollTo(0, 0);
+}
+function renderResults() {
+  const res = $('#res'); if (!res) return;
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    res.innerHTML = S.projects.length ? '<div class="plist">' + S.projects.map(p => {
+      let d = 0, t = 0; p.speakers.forEach(s => { const pr = progress(p, s); d += pr.done; t += pr.total; });
+      return '<button class="prow" data-act="project" data-pid="' + p.pid + '"><b>' + esc(p.name) + '</b><span>' + esc(projDate(p)) + ' · ' + p.speakers.length + ' speaker' + (p.speakers.length === 1 ? '' : 's') + ' · <i>' + d + '/' + t + ' done</i></span></button>';
+    }).join('') + '</div>' : '<div class="empty">No projects yet.<br>Tap ＋ Import to add a shoot.</div>';
+    return;
+  }
+  const hits = [];
+  S.projects.forEach(p => p.speakers.forEach(s => s.items.forEach(i => {
+    if ((i.id + ' ' + i.title + ' ' + s.name + ' ' + i.lines.join(' ') + ' ' + i.prompts.join(' ')).toLowerCase().includes(q)) hits.push({p, s, i});
+  })));
+  res.innerHTML = hits.length ? hits.slice(0, 60).map(h => '<button class="qrow" data-act="hit" data-pid="' + h.p.pid + '" data-sid="' + h.s.sid + '" data-uid="' + h.i.uid + '"><b>' + esc(h.i.id) + '</b><span>' + esc(h.s.name) + ' · ' + esc(h.p.name) + '<br>' + esc(preview(h.i)) + '</span></button>').join('') : '<div class="empty">No scripts match.</div>';
+}
+
+/* ================= operator view ================= */
+let O = {idx: 0, said: {}};
+function renderOperator() {
+  const p = proj(view.pid), s = spkOf(p, view.sid), list = s.items;
+  O.idx = clamp(O.idx, 0, Math.max(0, list.length - 1));
+  const it = list[O.idx], pr = progress(p, s);
+  let h = '<div class="top"><button class="rbtn" data-act="op-back" aria-label="Back">' + ICON_BACK + '</button><h1>' + esc(s.name) + '<small>Operator · ' + pr.done + '/' + pr.total + ' done</small></h1>' +
+    (it && it.type !== 'interview' ? '<button class="btn" data-act="op-prompter">Prompter</button>' : '') + '</div>';
+  if (!it) { $('#app').innerHTML = h + '<div class="empty">No scripts.</div>'; return; }
+  const c = counts(p.pid, s, it);
+  h += '<div class="opcur">' + badge(p.pid, s, it) + (it.title ? '<div class="ttl">' + esc(it.title) + '</div>' : '') +
+    '<div class="tkn">Take ' + (c.total + 1) + ' · ' + c.good + '/' + it.target + ' good</div>' +
+    (it.prompts.length ? '<h3 class="sec">Ask</h3><ol class="ask">' + it.prompts.map((q, i) => '<li class="' + (O.said['p' + i] ? 'said' : '') + '" data-act="op-said" data-k="p' + i + '">' + esc(q) + '</li>').join('') + '</ol>' : '') +
+    (it.lines.length ? '<h3 class="sec">' + (it.prompts.length ? 'Target lines' : 'Lines') + '</h3><ol>' + it.lines.map((l, i) => '<li class="' + (O.said['l' + i] ? 'said' : '') + '" data-act="op-said" data-k="l' + i + '">' + esc(l) + '</li>').join('') + '</ol>' : '') +
+    (it.onScreen ? '<h3 class="sec">On-screen text</h3><div>' + esc(it.onScreen) + '</div>' : '') +
+    '<div class="row" style="margin:12px 0 0"><button class="btn" data-act="op-edit">Edit</button></div></div>' +
+    '<div class="opbtns"><button class="btn good" data-act="op-take" data-r="good">✓ Good</button><button class="btn bad" data-act="op-take" data-r="redo">✗ Redo</button><button class="btn" data-act="op-take" data-r="next">Next →</button></div>';
+  const q = list.slice(O.idx + 1, O.idx + 4);
+  h += '<h3 class="sec">Up next</h3>' + (q.length ? q.map((n, i) => '<button class="qrow" data-act="op-jump" data-i="' + (O.idx + 1 + i) + '"><b>' + esc(n.id) + '</b><span>' + TYPES[n.type] + (n.pairsWith ? ' → ' + esc(n.pairsWith) : '') + ' · ' + tkMarks(p.pid, s, n).txt + '<br>' + esc(preview(n)) + '</span></button>').join('') : '<div class="hint">End of this folder.</div>') +
+    '<p class="hint">Tap a line or question to cross it off as it is said.</p>';
+  $('#app').innerHTML = h;
+}
+
+/* ================= clicks ================= */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  if (Date.now() - suppressClick < 400) return;
+  const a = el.dataset.act, p = proj(view.pid), s = spkOf(p, view.sid);
+  if (a === 'home') { view = {name: 'projects'}; render(); }
+  else if (a === 'project') { view = {name: 'project', pid: el.dataset.pid}; render(); }
+  else if (a === 'proj') { view = {name: 'project', pid: view.pid}; render(); }
+  else if (a === 'folder') { filter = 'all'; view = {name: 'folder', pid: view.pid, sid: el.dataset.sid}; render(); }
+  else if (a === 'filter') { filter = el.dataset.f; render(); }
+  else if (a === 'open') { const it = s.items.find(i => i.uid === el.dataset.uid); if (!it) return; if (it.type === 'interview') { O = {idx: s.items.indexOf(it), said: {}}; view = {name: 'operator', pid: p.pid, sid: s.sid}; render(); } else openPrompter(p.pid, s.sid, it.uid); }
+  else if (a === 'hit') { const hp = proj(el.dataset.pid), hs = spkOf(hp, el.dataset.sid), it = hs.items.find(i => i.uid === el.dataset.uid); view = {name: 'folder', pid: hp.pid, sid: hs.sid}; filter = 'all'; if (it.type === 'interview') { O = {idx: hs.items.indexOf(it), said: {}}; view.name = 'operator'; render(); } else { render(); openPrompter(hp.pid, hs.sid, it.uid); } }
+  else if (a === 'start') { const l = plist(s); const f = l.find(i => !isDone(p.pid, s, i)) || l[0]; if (f) openPrompter(p.pid, s.sid, f.uid); else toast('No scripts in this folder'); }
+  else if (a === 'operator') { const i = s.items.findIndex(x => !isDone(p.pid, s, x)); O = {idx: Math.max(0, i), said: {}}; view = {name: 'operator', pid: p.pid, sid: s.sid}; render(); }
+  else if (a === 'op-back') { view = {name: 'folder', pid: view.pid, sid: view.sid}; render(); }
+  else if (a === 'op-prompter') { const it = s.items[O.idx]; view = {name: 'folder', pid: p.pid, sid: s.sid}; render(); openPrompter(p.pid, s.sid, it.uid); }
+  else if (a === 'op-said') { O.said[el.dataset.k] = !O.said[el.dataset.k]; el.classList.toggle('said'); }
+  else if (a === 'op-jump') { O = {idx: +el.dataset.i, said: {}}; render(); }
+  else if (a === 'op-edit') editItem(p, s, s.items[O.idx]);
+  else if (a === 'op-take') {
+    const it = s.items[O.idx], r = el.dataset.r; let adv = r === 'next';
+    if (r !== 'next') adv = logTake(p, s, it, r);
+    if (adv) { if (O.idx >= s.items.length - 1) toast('End of ' + s.name + '’s folder'); else O.idx++; }
+    O.said = {}; render();
+  }
+  else if (a === 'newitem') editItem(p, s, null);
+  else if (a === 'import') importSheet();
+  else if (a === 'exp') saveFile(fileSafe(p.name) + '.json', JSON.stringify(exportProject(p), null, 2), 'application/json');
+  else if (a === 'log-json') { const rows = S.log.filter(l => l.pid === p.pid); if (!rows.length) return toast('No takes logged yet'); saveFile(fileSafe(p.name) + '-takes.json', JSON.stringify(rows.map(l => ({project: p.name, speaker: l.speaker, id: l.id, type: l.type, take: l.take, result: l.result, timestamp: l.ts})), null, 2), 'application/json'); }
+  else if (a === 'log-csv') { const rows = S.log.filter(l => l.pid === p.pid); if (!rows.length) return toast('No takes logged yet'); const q = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v); saveFile(fileSafe(p.name) + '-takes.csv', 'project,speaker,id,type,take,result,timestamp\n' + rows.map(l => [p.name, l.speaker, l.id, l.type, l.take, l.result, l.ts].map(q).join(',')).join('\n') + '\n', 'text/csv'); }
+  else if (a === 'rename') { const n = prompt('Project name', p.name); if (n && n.trim()) { p.name = n.trim(); save(); render(); } }
+  else if (a === 'clearlog') { if (confirm('Clear every logged take for "' + p.name + '"? This cannot be undone.')) { S.log = S.log.filter(l => l.pid !== p.pid); save(); render(); } }
+  else if (a === 'delproj') { if (confirm('Delete "' + p.name + '" and its take log from this phone? This cannot be undone.')) { S.projects = S.projects.filter(x => x !== p); S.log = S.log.filter(l => l.pid !== p.pid); save(); view = {name: 'projects'}; render(); } }
+  else if (a === 'close-sheet') closeSheet();
+});
+document.addEventListener('input', e => { if (e.target.id === 'q') { query = e.target.value; renderResults(); } });
+const fileSafe = n => n.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'project';
+async function saveFile(name, text, mime) {
+  const file = new File([text], name, {type: mime});
+  const touch = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+  if (touch && navigator.canShare && navigator.canShare({files: [file]})) {
+    try { await navigator.share({files: [file]}); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+/* ================= drag to reorder ================= */
+(function () {
+  let timer = null, drag = null, sx = 0, sy = 0;
+  document.addEventListener('pointerdown', e => {
+    const card = e.target.closest('#cards .card'); if (!card || filter !== 'all') return;
+    sx = e.clientX; sy = e.clientY; clearTimeout(timer);
+    timer = setTimeout(() => { drag = card; card.classList.add('drag'); if (navigator.vibrate) navigator.vibrate(10); }, 380);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 8) { clearTimeout(timer); timer = null; } return; }
+    const el = document.elementFromPoint(e.clientX, e.clientY), over = el && el.closest('#cards .card');
+    if (over && over !== drag) { const kids = [...drag.parentNode.children]; drag.parentNode.insertBefore(drag, kids.indexOf(drag) < kids.indexOf(over) ? over.nextSibling : over); }
+  });
+  const end = () => {
+    clearTimeout(timer); timer = null; if (!drag) return;
+    drag.classList.remove('drag'); suppressClick = Date.now();
+    const s = spkOf(proj(view.pid), view.sid), order = [...drag.parentNode.children].map(c => c.dataset.uid);
+    if (s) { s.items.sort((a, b) => order.indexOf(a.uid) - order.indexOf(b.uid)); save(); }
+    drag = null;
+  };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', e => { if (!drag) { clearTimeout(timer); timer = null; } });
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+  document.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, {passive: false});
+  document.addEventListener('contextmenu', e => { if (e.target.closest('#cards')) e.preventDefault(); });
+})();
+
+/* ================= sheets ================= */
+function openSheet(html) { const sh = $('#sheet'); sh.innerHTML = '<div class="sh">' + html + '</div>'; sh.hidden = false; }
+function closeSheet() { $('#sheet').hidden = true; $('#sheet').innerHTML = ''; if (P.on) layout(); }
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+const sheetOpen = () => !$('#sheet').hidden;
+const closeBtn = '<button class="btn" data-act="close-sheet">Close</button>';
+
+function settingsSheet() {
+  const s = S.settings;
+  const opt = (v, cur, label) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + label + '</option>';
+  openSheet('<h2>Settings ' + closeBtn + '</h2>' +
+    '<label class="f"><span>Text size: <b id="sv-font">' + s.font + '</b> px</span><input type="range" data-set="font" min="24" max="110" step="2" value="' + s.font + '"></label>' +
+    '<label class="f"><span>Line spacing: <b id="sv-spacing">' + s.spacing + '</b></span><input type="range" data-set="spacing" min="1" max="1.8" step="0.05" value="' + s.spacing + '"></label>' +
+    '<label class="f"><span>Side margins: <b id="sv-margin">' + s.margin + '</b>%</span><input type="range" data-set="margin" min="0" max="25" step="1" value="' + s.margin + '"></label>' +
+    '<div class="f2"><label class="f"><span>Text alignment</span><select data-set="align">' + opt('left', s.align, 'Left') + opt('center', s.align, 'Centre') + opt('right', s.align, 'Right') + '</select></label>' +
+    '<label class="f"><span>Speed (words per minute)</span><input type="number" inputmode="numeric" data-set="wpm" min="60" max="300" value="' + s.wpm + '"></label></div>' +
+    '<div class="f2"><label class="f"><span>Countdown before start</span><select data-set="countdown">' + opt(0, s.countdown, 'Off') + opt(3, s.countdown, '3 seconds') + '</select></label>' +
+    '<label class="f"><span>Hold after a hook</span><select data-set="hold">' + opt(0, s.hold, 'Off') + opt(2, s.hold, '2 seconds') + '</select></label></div>' +
+    '<label class="sw"><span>Mirror text (for beam-splitter glass)</span><input type="checkbox" data-set="mirror"' + (s.mirror ? ' checked' : '') + '></label>' +
+    '<p class="note">Keys and page-turner: Space or → starts, pauses or goes to the next line. ← goes back a line (or restarts, then previous script). After a read, → marks the take good and ← marks a redo. ↑ ↓ change speed. M switches Scroll / Line.</p>');
+}
+$('#sheet').addEventListener('input', e => {
+  const k = e.target.dataset.set; if (!k) return;
+  let v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  if (k !== 'align' && k !== 'mirror') { v = parseFloat(v); if (isNaN(v)) return; }
+  if (k === 'wpm') v = clamp(v, 60, 300);
+  S.settings[k] = v; save();
+  const lab = $('#sv-' + k); if (lab) lab.textContent = v;
+  if (P.on) { syncBar(); layout(); }
+});
+
+function editItem(p, s, it) {
+  const isNew = !it;
+  const v = it || {id: '', type: 'hook', title: '', pairsWith: '', onScreen: '', target: 2, mode: '', lines: [], prompts: []};
+  const opt = (val, cur, label) => '<option value="' + val + '"' + (val === cur ? ' selected' : '') + '>' + label + '</option>';
+  openSheet('<h2>' + (isNew ? 'New script for ' + esc(s.name) : 'Edit ' + esc(v.id)) + ' ' + closeBtn + '</h2>' +
+    '<div class="f2"><label class="f"><span>ID' + (isNew ? ' (e.g. H18)' : ' (fixed)') + '</span><input id="e-id" value="' + esc(v.id) + '"' + (isNew ? '' : ' disabled') + ' autocapitalize="characters" autocomplete="off"></label>' +
+    '<label class="f"><span>Type</span><select id="e-type">' + Object.keys(TYPES).map(t => opt(t, v.type, TYPES[t])).join('') + '</select></label></div>' +
+    '<label class="f"><span>Words to say (one line per row, or separate lines with " / ")</span><textarea id="e-lines" rows="6">' + esc(v.lines.join('\n')) + '</textarea></label>' +
+    '<label class="f"><span>Interview questions (optional, one per row; shown in the operator view)</span><textarea id="e-prompts" rows="3" style="min-height:80px">' + esc(v.prompts.join('\n')) + '</textarea></label>' +
+    '<div class="f2"><label class="f"><span>Title (optional)</span><input id="e-title" value="' + esc(v.title) + '"></label>' +
+    '<label class="f"><span>Pairs with (e.g. B02)</span><input id="e-pair" value="' + esc(v.pairsWith) + '" autocapitalize="characters"></label></div>' +
+    '<div class="f2"><label class="f"><span>Good takes needed</span><input id="e-target" type="number" inputmode="numeric" min="1" max="9" value="' + v.target + '"></label>' +
+    '<label class="f"><span>Prompter mode</span><select id="e-mode">' + opt('', v.mode, 'Default for type') + opt('line', v.mode, 'Line') + opt('scroll', v.mode, 'Scroll') + '</select></label></div>' +
+    '<div class="row"><button class="btn accent" id="e-save">Save</button>' + (isNew ? '' : '<button class="btn" id="e-del" style="color:var(--bad)">Delete script</button>') + '</div>');
+  $('#e-save').onclick = () => {
+    const id = isNew ? $('#e-id').value.trim() : v.id; if (!id) return toast('Give it an ID first');
+    const n = normItem({id, type: $('#e-type').value, title: $('#e-title').value.trim(), pairsWith: $('#e-pair').value.trim(), onScreen: v.onScreen,
+      takes: $('#e-target').value, mode: $('#e-mode').value, lines: splitLines($('#e-lines').value), prompts: $('#e-prompts').value.split(/\n+/).map(x => x.trim()).filter(Boolean)});
+    if (isNew) s.items.push(n); else { n.uid = it.uid; Object.assign(it, n); }
+    if (s.items.some(i => i.type !== 'interview')) s.operatorOnly = false;
+    save(); closeSheet(); if (!P.on) render();
+  };
+  if (!isNew) $('#e-del').onclick = () => {
+    if (!confirm('Delete ' + v.id + ' from ' + s.name + '’s folder?')) return;
+    s.items = s.items.filter(i => i !== it); save(); closeSheet();
+    if (P.on) { if (!plist(s).length) closePrompter(); else { P.idx = Math.min(P.idx, plist(s).length - 1); loadScript(); } } else render();
+  };
+}
+
+/* ================= import ================= */
+function importSheet() {
+  openSheet('<h2>Import a shoot ' + closeBtn + '</h2>' +
+    '<label class="f"><span>Paste a project (JSON) or a shoot brief (markdown)</span><textarea id="i-text" rows="7" placeholder="Paste here…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></label>' +
+    '<label class="f"><span>Project name (optional; used for briefs and .txt files)</span><input id="i-name" placeholder="e.g. Tandem – Mon Oct 19"></label>' +
+    '<div class="row"><button class="btn accent" id="i-go">Import pasted text</button><button class="btn" id="i-files">Choose files (.txt, .zip, .json)</button><button class="btn" id="i-dir">Choose a folder</button></div>' +
+    '<p class="note">Script files are named Speaker_01_H01.txt: the speaker becomes the folder, the number is the run order and the last part is the badge. On iPhone, pick a speaker’s zip (or several) from the Files app; folder picking only works on a computer.</p>');
+  $('#i-go').onclick = () => { const t = $('#i-text').value.trim(); if (!t) return toast('Paste something first'); try { finishImport(importText(t, $('#i-name').value.trim())); } catch (e) { toast('Could not read that: ' + e.message, 4000); } };
+  $('#i-files').onclick = () => $('#fpick').click();
+  $('#i-dir').onclick = () => $('#dpick').click();
+}
+function finishImport(list) {
+  list = list.filter(p => p.speakers.length);
+  if (!list.length) throw new Error('no scripts found');
+  let last; list.forEach(p => last = addProject(p));
+  closeSheet(); view = {name: 'project', pid: last.pid}; render();
+  toast('Imported ' + last.speakers.reduce((n, s) => n + s.items.length, 0) + ' scripts');
+}
+function importText(t, name) {
+  if (/^[\[{]/.test(t)) {
+    const o = JSON.parse(t);
+    const arr = Array.isArray(o) ? o : Array.isArray(o.projects) ? o.projects : [o];
+    return arr.map(normProject);
+  }
+  return [normProject(parseBrief(t, name))];
+}
+const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+const cleanSay = s => { s = String(s || '').replace(/\s*(⚠️|🎬|📱|\*\().*$/, '').trim(); const m = s.match(/^["“](.*)["”]$/); return m && !/["“”]/.test(m[1]) ? m[1] : s; };
+function parseBrief(md, name) {
+  let title = '', spk = null, cur = null; const hooks = [], ctas = {}, bodies = [];
+  for (const raw of md.split(/\r?\n/)) {
+    const l = raw.trim(); let m;
+    if (!title && (m = l.match(/^# (.+)/))) { title = m[1].replace(/^Shoot brief:\s*/i, ''); continue; }
+    if ((m = l.match(/^#{2,4} (B\d+\w*):\s*(.+)$/))) {
+      const who = (m[2].match(/\(([^)]*)\)\s*$/) || [])[1] || '';
+      cur = {id: m[1], title: m[2].replace(/\s*\([^)]*\)\s*$/, '').replace(/^["“]|["”]$/g, ''), who, lines: [], prompts: [], parked: false}; bodies.push(cur); spk = null; continue;
+    }
+    if ((m = l.match(/^#{1,4} (.+)/))) { cur = null; spk = /^### /.test(l) ? m[1].replace(/\s*\(.*$/, '').trim() : null; continue; }
+    if (/^\|\s*H\d+\w*\s*\|/.test(l)) { const c = cells(l); if (/parked/i.test(c[5] || '')) continue; hooks.push({id: c[0], say: cleanSay(c[1]), onScreen: c[2] || '', speaker: spk || 'Speaker', pairs: (c[5] || '').split('@')[0].split(',')[0].trim(), cta: (c[6] || '').trim()}); continue; }
+    if (/^\|\s*C\d+\w*\s*\|/.test(l)) { const c = cells(l); ctas[c[0]] = cleanSay(c[1]); continue; }
+    if (cur) {
+      if (/^\*\*Parked/i.test(l)) cur.parked = true;
+      else if (l.startsWith('>')) cur.lines.push(...l.replace(/^>\s*/, '').split(/\s+\/\s+/).map(s => s.trim().replace(/^["“]|["”]$/g, '')).filter(Boolean));
+      else if ((m = l.match(/^\*\*Prompts[^*]*\*\*\s*(.+)/i))) cur.prompts = m[1].split(/\s+·\s+/).map(s => s.trim().replace(/^["“]|["”]$/g, '')).filter(Boolean);
+    }
+  }
+  const names = []; hooks.forEach(h => { if (!names.includes(h.speaker)) names.push(h.speaker); });
+  bodies.forEach(b => { if (b.who && !names.some(n => b.who.includes(n))) names.push(b.who); });
+  const speakers = names.map(n => {
+    const items = [], mine = bodies.filter(b => b.who.includes(n) && b.lines.length);
+    const myHooks = hooks.filter(h => h.speaker === n), used = new Set();
+    mine.forEach(b => {
+      const allQ = b.lines.every(x => /\?$/.test(x));
+      if (b.parked && !allQ) return;
+      if (allQ) items.push({id: b.id, type: 'interview', title: b.title, takes: 1, prompts: b.lines});
+      else items.push({id: b.id, type: 'body', title: b.title, takes: 2, mode: 'line', lines: b.lines, prompts: b.prompts});
+    });
+    mine.forEach(b => myHooks.filter(h => h.pairs === b.id).forEach(h => { used.add(h); items.push({id: h.id, type: 'hook', pairsWith: h.pairs, onScreen: h.onScreen, takes: 2, text: h.say}); }));
+    myHooks.filter(h => !used.has(h)).forEach(h => items.push({id: h.id, type: 'hook', pairsWith: /^B\d/.test(h.pairs) ? h.pairs : '', onScreen: h.onScreen, takes: 2, text: h.say}));
+    [...new Set(myHooks.map(h => h.cta))].filter(c => ctas[c]).sort().forEach(c => items.push({id: c, type: 'cta', takes: 2, text: ctas[c]}));
+    return {name: n, items};
+  }).filter(s => s.items.length);
+  if (!speakers.length && Object.keys(ctas).length) speakers.push({name: 'Speaker', items: Object.keys(ctas).map(c => ({id: c, type: 'cta', text: ctas[c]}))});
+  return {project: name || title || 'Imported brief', speakers};
+}
+function txtToProject(files, name) {
+  const by = {};
+  files.forEach(f => {
+    const parts = f.name.split('/'), base = parts.pop(), m = base.match(/^(.+?)_(\d+)_(.+)\.txt$/i);
+    if (!m) return;
+    const sp = m[1].replace(/_/g, ' ');
+    (by[sp] = by[sp] || []).push({n: +m[2], id: m[3], lines: f.text.split(/\n\s*\n|\s+\/\s+/).map(x => x.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)});
+  });
+  const speakers = Object.keys(by).map(sp => ({name: sp, items: by[sp].sort((a, b) => a.n - b.n).map(x => { const t = guessType(x.id); return t === 'interview' ? {id: x.id, type: t, prompts: x.lines} : {id: x.id, type: t, lines: x.lines}; })}));
+  return {project: name || 'Imported – ' + new Date().toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'}), speakers};
+}
+async function unzip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder(), out = [];
+  let e = u8.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip file');
+  const n = dv.getUint16(e + 10, true); let off = dv.getUint32(e + 16, true);
+  for (let i = 0; i < n && dv.getUint32(off, true) === 0x02014b50; i++) {
+    const method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true), nl = dv.getUint16(off + 28, true), el = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true), lho = dv.getUint32(off + 42, true);
+    const name = td.decode(u8.subarray(off + 46, off + 46 + nl)); off += 46 + nl + el + cl;
+    if (!/\.txt$/i.test(name) || /__MACOSX|\/\._/.test(name)) continue;
+    const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true), data = u8.subarray(start, start + csize);
+    if (method === 0) out.push({name, text: td.decode(data)});
+    else if (method === 8 && window.DecompressionStream) out.push({name, text: await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()});
+  }
+  return out;
+}
+async function handleFiles(fl) {
+  const name = ($('#i-name') || {}).value || ''; const txts = [], projects = [];
+  try {
+    for (const f of fl) {
+      const path = f.webkitRelativePath || f.name;
+      if (/\.zip$/i.test(f.name)) txts.push(...await unzip(await f.arrayBuffer()));
+      else if (/\.json$/i.test(f.name)) projects.push(...importText((await f.text()).trim(), name));
+      else if (/\.md$/i.test(f.name)) projects.push(...importText((await f.text()).trim(), name));
+      else if (/\.txt$/i.test(f.name)) txts.push({name: path, text: await f.text()});
+    }
+    if (txts.length) projects.push(normProject(txtToProject(txts, name.trim())));
+    finishImport(projects);
+  } catch (e) { toast('Could not import: ' + e.message, 4000); }
+}
+['fpick', 'dpick'].forEach(id => $('#' + id).addEventListener('change', e => { const fl = [...e.target.files]; e.target.value = ''; if (fl.length) handleFiles(fl); }));
+
+/* ================= screen wake ================= */
+let wl = null, wantWake = false, wakeWarned = false;
+async function wake(on) {
+  wantWake = on;
+  try {
+    if (on) {
+      if (!('wakeLock' in navigator)) { if (!wakeWarned) { wakeWarned = true; toast('This phone cannot hold the screen awake from here. Set Auto-Lock to Never for the shoot.', 5000); } return; }
+      if (!wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); }
+    } else if (wl) { const w = wl; wl = null; await w.release(); }
+  } catch (e) { /* denied while hidden or on low power: retried when visible */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && wantWake) wake(true); });
+
+/* ================= prompter ================= */
+const P = {on: false, idx: 0, mode: 'scroll', line: 0, t: 0, dur: 1, max: 0, playing: false, phase: 'idle'};
+const SVG_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>', SVG_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+const plist = s => s.items.filter(i => i.type !== 'interview');
+const pctx = () => { const p = proj(P.pid), s = spkOf(p, P.sid), l = plist(s); return {p, s, l, it: l[P.idx]}; };
+function openPrompter(pid, sid, itemUid) {
+  const s = spkOf(proj(pid), sid), l = plist(s); if (!l.length) return toast('No scripts to prompt');
+  P.pid = pid; P.sid = sid; P.idx = Math.max(0, l.findIndex(i => i.uid === itemUid)); P.on = true;
+  $('#app').hidden = true; $('#prompter').hidden = false; wake(true); syncBar(); loadScript();
+}
+function closePrompter() {
+  stopAll(); P.on = false; $('#prompter').hidden = true; $('#app').hidden = false;
+  view = {name: 'folder', pid: P.pid, sid: P.sid}; render();
+}
+function stopAll() { P.playing = false; cancelAnimationFrame(P.raf); clearTimeout(P.hideT); clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
+function loadScript() {
+  stopAll(); const {it} = pctx();
+  P.mode = it.mode || (it.type === 'body' ? 'line' : 'scroll'); P.line = 0; P.t = 0; P.phase = 'idle';
+  $('#strip').hidden = true; $('#prompter').classList.remove('nobar'); updPlay(); layout();
+}
+function syncBar() { const s = S.settings; $('#wpm').value = s.wpm; $('#wv').textContent = s.wpm + ' WPM'; $('#fsz').value = s.font; $('#wv2').textContent = s.font + ' px'; }
+function updPlay() { $('#bplay').innerHTML = P.playing || (P.mode === 'line' && P.phase === 'play') ? SVG_PAUSE : SVG_PLAY; }
+function setProg(f) { $('#prog i').style.width = (clamp(f, 0, 1) * 100).toFixed(2) + '%'; }
+function slate() {
+  const {p, s, it} = pctx(), c = counts(p.pid, s, it);
+  $('#slate').innerHTML = '<b>' + esc(it.id) + '</b> · take ' + (c.total + 1) + '/' + it.target + ' · ' + esc(s.name) + (P.mode === 'line' && it.lines.length > 1 ? ' · line ' + (P.line + 1) + ' of ' + it.lines.length : '');
+}
+function layout() {
+  if (!P.on) return;
+  const {it} = pctx(), s = S.settings, st = $('#stage'), tx = $('#ptext');
+  $('#prompter').classList.toggle('mirror', !!s.mirror);
+  tx.style.textAlign = s.align; tx.style.lineHeight = s.spacing; tx.style.left = tx.style.right = s.margin + '%';
+  $('#pmode').textContent = P.mode === 'line' ? 'Line' : 'Scroll';
+  const lines = it.lines.length ? it.lines : ['(No words yet. Tap the pencil to add them.)'];
+  if (P.mode === 'line') {
+    P.line = clamp(P.line, 0, lines.length - 1);
+    tx.textContent = lines[P.line]; tx.style.transform = '';
+    let f = Math.round(s.font * 1.5); tx.style.fontSize = f + 'px';
+    const h = st.clientHeight;
+    while (f > 18 && tx.offsetHeight > h) { f -= 2; tx.style.fontSize = f + 'px'; }
+    setProg(P.phase === 'strip' ? 1 : P.line / lines.length);
+  } else {
+    tx.style.fontSize = s.font + 'px';
+    tx.innerHTML = lines.map(l => '<p>' + esc(l) + '</p>').join('');
+    const th = tx.offsetHeight, sh = st.clientHeight;
+    P.max = th <= sh ? 0 : th - sh * 0.5;
+    const words = lines.join(' ').split(/\s+/).filter(Boolean).length, f = P.dur ? P.t / P.dur : 0;
+    const nd = Math.max(1.5, words / s.wpm * 60);
+    if (P.t > 0 && nd !== P.dur) P.t = f * nd;
+    P.dur = nd; applyScroll();
+  }
+  slate();
+}
+function applyScroll() { const f = clamp(P.t / P.dur, 0, 1); $('#ptext').style.transform = 'translate3d(0,' + (-f * P.max).toFixed(1) + 'px,0)'; setProg(f); }
+function showBar() { clearTimeout(P.hideT); const el = $('#prompter'); if (el.classList.contains('nobar') && P.phase !== 'strip') { el.classList.remove('nobar'); layout(); } }
+function hideBarSoon() { clearTimeout(P.hideT); P.hideT = setTimeout(() => { if (P.on && P.phase === 'play' && !sheetOpen()) { $('#prompter').classList.add('nobar'); layout(); } }, 2000); }
+function countdown(n, phase, label, done) {
+  P.phase = phase; clearInterval(P.cdT); const c = $('#count'); $('#ptext').classList.add('dim'); c.hidden = false;
+  const show = () => { c.innerHTML = (label ? '<small>' + label + '</small>' : '') + n; };
+  show();
+  P.cdT = setInterval(() => { n--; if (n <= 0) { endCountdown(); done(); } else show(); }, 1000);
+}
+function endCountdown() { clearInterval(P.cdT); $('#count').hidden = true; $('#ptext').classList.remove('dim'); }
+function play() {
+  if (P.phase !== 'idle') return;
+  const go = () => { P.phase = 'play'; if (P.mode === 'scroll') { P.playing = true; P.last = performance.now(); P.raf = requestAnimationFrame(tick); } updPlay(); hideBarSoon(); };
+  const fresh = P.mode === 'scroll' ? P.t === 0 : P.line === 0;
+  if (fresh && S.settings.countdown) countdown(S.settings.countdown, 'count', '', go); else go();
+}
+function pause() { P.playing = false; cancelAnimationFrame(P.raf); if (P.phase === 'play') P.phase = 'idle'; updPlay(); showBar(); }
+function tick(now) {
+  if (!P.playing) return;
+  P.t += Math.min(0.1, (now - P.last) / 1000); P.last = now; applyScroll();
+  if (P.t >= P.dur) { P.playing = false; finishRead(); return; }
+  P.raf = requestAnimationFrame(tick);
+}
+function finishRead() {
+  P.playing = false; cancelAnimationFrame(P.raf); clearTimeout(P.hideT); setProg(1);
+  const {it} = pctx();
+  if (it.type === 'hook' && S.settings.hold) countdown(S.settings.hold, 'hold', 'HOLD', showStrip); else showStrip();
+}
+function showStrip() { endCountdown(); P.phase = 'strip'; updPlay(); $('#prompter').classList.add('nobar'); $('#strip').hidden = false; layout(); }
+function take(r) {
+  const {p, s, it} = pctx();
+  if (r === 'next') return go(1);
+  if (logTake(p, s, it, r)) go(1); else loadScript();
+}
+function go(d) {
+  const {l, s} = pctx(), n = P.idx + d;
+  if (n < 0) return toast('First script in this folder');
+  if (n >= l.length) { closePrompter(); return toast('End of ' + s.name + '’s folder'); }
+  P.idx = n; loadScript();
+}
+function nextLine() {
+  const {it} = pctx();
+  if (P.phase === 'idle' && P.line === 0 && S.settings.countdown && !P.armed) { P.armed = true; return play(); }
+  P.armed = false;
+  if (P.line < it.lines.length - 1) { P.line++; P.phase = 'play'; updPlay(); layout(); hideBarSoon(); } else finishRead();
+}
+function prevLine() { if (P.phase === 'strip') { $('#strip').hidden = true; P.phase = 'idle'; $('#prompter').classList.remove('nobar'); } if (P.line > 0) { P.line--; layout(); } else go(-1); }
+function primary() {
+  if (P.phase === 'strip') return;
+  if (P.phase === 'count') { endCountdown(); P.phase = 'idle'; P.armed = false; return showBar(); }
+  if (P.phase === 'hold') return showStrip();
+  if (P.mode === 'line') return nextLine();
+  P.playing ? pause() : play();
+}
+function setMode(m) {
+  const {it} = pctx(); stopAll(); P.mode = m; it.mode = m; save();
+  P.line = 0; P.t = 0; P.phase = 'idle'; $('#strip').hidden = true; $('#prompter').classList.remove('nobar'); updPlay(); layout();
+}
+function setWpm(v) { S.settings.wpm = clamp(Math.round(v / 5) * 5, 60, 300); save(); syncBar(); if (P.mode === 'scroll') layout(); }
+
+/* prompter controls */
+$('#pback').onclick = closePrompter;
+$('#pmode').onclick = () => setMode(P.mode === 'line' ? 'scroll' : 'line');
+$('#slate').onclick = () => { showBar(); if (P.phase === 'play') hideBarSoon(); };
+$('#edge').onclick = () => { showBar(); if (P.phase === 'play') hideBarSoon(); };
+$('#bplay').onclick = () => { if (P.mode === 'line') { if (P.phase === 'play') { P.phase = 'idle'; updPlay(); showBar(); } else play(); } else P.playing ? pause() : play(); };
+$('#bprev').onclick = () => go(-1);
+$('#bnext').onclick = () => go(1);
+$('#bedit').onclick = () => { pause(); const {p, s, it} = pctx(); editItem(p, s, it); };
+$('#bset').onclick = () => { pause(); settingsSheet(); };
+$('#baa').onclick = () => { const on = $('#gsize').hidden; $('#gsize').hidden = !on; $('#gspeed').hidden = on; $('#baa').classList.toggle('on', on); };
+$('#wpm').oninput = e => setWpm(+e.target.value);
+$('#fsz').oninput = e => { S.settings.font = +e.target.value; save(); syncBar(); layout(); };
+$('#pbar').addEventListener('pointerdown', () => { if (P.phase === 'play') hideBarSoon(); });
+$('#strip').addEventListener('click', e => { const b = e.target.closest('[data-take]'); if (b) take(b.dataset.take); });
+
+/* touch: tap, swipe between scripts, drag to scrub */
+(function () {
+  const st = $('#stage'); let g = null;
+  st.addEventListener('pointerdown', e => { g = {x: e.clientX, y: e.clientY, ly: e.clientY, moved: false}; });
+  st.addEventListener('pointermove', e => {
+    if (!g) return; const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (Math.hypot(dx, dy) > 12) g.moved = true;
+    if (g.moved && P.mode === 'scroll' && P.max > 0 && Math.abs(dy) > Math.abs(dx) && (P.phase === 'idle' || P.phase === 'play')) {
+      P.t = clamp(P.t - (e.clientY - g.ly) / P.max * P.dur, 0, P.dur); applyScroll();
+    }
+    g.ly = e.clientY;
+  });
+  st.addEventListener('pointerup', e => {
+    if (!g) return; const dx = e.clientX - g.x, dy = e.clientY - g.y, moved = g.moved; g = null;
+    if (!moved) return primary();
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+  });
+  st.addEventListener('pointercancel', () => { g = null; });
+})();
+
+/* keyboard and Bluetooth page-turners */
+document.addEventListener('keydown', e => {
+  if (!P.on || sheetOpen() || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') return;
+  const k = e.key, fwd = k === 'ArrowRight' || k === 'PageDown', back = k === 'ArrowLeft' || k === 'PageUp', main = k === ' ' || k === 'Enter';
+  if (!(fwd || back || main || k === 'ArrowUp' || k === 'ArrowDown' || k === 'Escape' || k === 'm' || k === 'M')) return;
+  e.preventDefault();
+  if (k === 'Escape') return closePrompter();
+  if (k === 'm' || k === 'M') return setMode(P.mode === 'line' ? 'scroll' : 'line');
+  if (k === 'ArrowUp') return setWpm(S.settings.wpm + 10);
+  if (k === 'ArrowDown') return setWpm(S.settings.wpm - 10);
+  if (P.phase === 'strip') { if (fwd || main) take('good'); else if (back) take('redo'); return; }
+  if (fwd || main) return primary();
+  if (P.phase === 'count' || P.phase === 'hold') return primary();
+  if (P.mode === 'line') return prevLine();
+  if (P.t > 0) { pause(); P.t = 0; applyScroll(); } else go(-1);
+});
+let rzT; const relayout = () => { clearTimeout(rzT); rzT = setTimeout(layout, 120); };
+window.addEventListener('resize', relayout); window.addEventListener('orientationchange', relayout);
+
+/* ================= start ================= */
+load(); render();
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

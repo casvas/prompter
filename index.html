@@ -707,13 +707,14 @@ function layout() {
     setProg(P.phase === 'strip' ? 1 : P.line / lines.length);
   } else {
     const lh = s.font * s.spacing, cue = $('#cue');
-    tx.style.fontSize = s.font + 'px'; tx.style.paddingTop = lh + 'px';
+    tx.style.fontSize = s.font + 'px'; tx.style.paddingTop = lh * 2 + 'px'; // first row starts one row below the marker, as a lead-in
     tx.innerHTML = lines.map(l => '<p>' + esc(l) + '</p>').join('');
     P.max = Math.max(lh, tx.offsetHeight - lh);
     const mpx = st.clientWidth * s.margin / 100;
     cue.hidden = mpx < 18; cue.style.top = (lh * 1.5 - 8) + 'px'; cue.style.left = Math.max(2, mpx - 17) + 'px';
     const words = lines.join(' ').split(/\s+/).filter(Boolean).length, f = P.dur ? P.t / P.dur : 0;
-    const nd = Math.max(1.5, words / s.wpm * 60);
+    const th = Math.max(lh, tx.offsetHeight - lh * 2);
+    const nd = Math.max(1.5, words / s.wpm * 60) * P.max / th; // same roll speed, plus the lead-in time
     if (P.t > 0 && nd !== P.dur) P.t = f * nd;
     P.dur = nd; applyScroll();
   }

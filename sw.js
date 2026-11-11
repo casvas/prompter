@@ -1,5 +1,5 @@
 // Offline cache. Bump the version when index.html changes so phones pick up the new copy.
-const CACHE = 'shoot-prompter-v3';
+const CACHE = 'shoot-prompter-v4';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
